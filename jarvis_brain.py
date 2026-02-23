@@ -1,12 +1,64 @@
 from llm_client import JarvisLLM
 from mqtt_client import JarvisMQTT
 import time
+import requests
+
+# Your Govee API key
+GOVEE_API_KEY = "332fe7ca-0995-436d-ad33-c837ae8af443"
 
 llm = JarvisLLM()
 mqtt = JarvisMQTT()
 
+# Store device info
+govee_device = None
+
+def init_govee():
+    global govee_device
+    
+    headers = {"Govee-API-Key": GOVEE_API_KEY}
+    response = requests.get("https://developer-api.govee.com/v1/devices", headers=headers)
+    
+    if response.status_code == 200:
+        data = response.json()
+        devices = data.get('data', {}).get('devices', [])
+        if devices:
+            govee_device = devices[0]
+            print(f"✅ Connected to Govee: {govee_device.get('deviceName')}")
+            return True
+    
+    print(f"❌ Govee connection failed: {response.status_code}")
+    return False
+
+def control_light(action):
+    if not govee_device:
+        return False
+    
+    headers = {
+        "Govee-API-Key": GOVEE_API_KEY,
+        "Content-Type": "application/json"
+    }
+    
+    cmd = "turn" if action == "turn_on" else "turn"
+    value = "on" if action == "turn_on" else "off"
+    
+    payload = {
+        "device": govee_device['device'],
+        "model": govee_device['model'],
+        "cmd": {
+            "name": cmd,
+            "value": value
+        }
+    }
+    
+    response = requests.put(
+        "https://developer-api.govee.com/v1/devices/control",
+        headers=headers,
+        json=payload
+    )
+    
+    return response.status_code == 200
+
 def handle_command(topic, payload):
-    """When someone sends a command to JARVIS"""
     command = payload
     
     print(f"\n🎤 Command received: {command}")
@@ -19,40 +71,62 @@ def handle_command(topic, payload):
     # Execute the action
     action = intent.get('action')
     device = intent.get('device')
-    room = intent.get('room', 'bedroom')
     response = intent.get('response')
     
-    if action == 'turn_on' and device == 'light':
-        mqtt_topic = f"jarvis/{room}/light/set"
-        mqtt.publish(mqtt_topic, "ON")
-        print(f"💡 Published: {mqtt_topic} = ON")
-        
-    elif action == 'turn_off' and device == 'light':
-        mqtt_topic = f"jarvis/{room}/light/set"
-        mqtt.publish(mqtt_topic, "OFF")
-        print(f"🌑 Published: {mqtt_topic} = OFF")
-        
-    elif action == 'query':
-        print(f"❓ Query requested for {device} in {room}")
+    # Control real Govee light!
+    if device == 'light':
+        if action == 'turn_on':
+            success = control_light('turn_on')
+            if success:
+                print(f"💡 REAL LIGHT TURNED ON!")
+                response = "Light is now on"
+            else:
+                print("❌ Failed to turn on light")
+                response = "Failed to turn on light"
+                
+        elif action == 'turn_off':
+            success = control_light('turn_off')
+            if success:
+                print(f"🌑 REAL LIGHT TURNED OFF!")
+                response = "Light is now off"
+            else:
+                print("❌ Failed to turn off light")
+                response = "Failed to turn off light"
     
     # Send response back
     mqtt.publish("jarvis/response", response)
     print(f"💬 JARVIS: {response}\n")
 
+# Initialize Govee
+print("Initializing Govee connection...")
+init_govee()
+
 # Connect to MQTT
 mqtt.connect()
-
-# Subscribe to command topic
 mqtt.subscribe("jarvis/command", handle_command)
 
 print("\n✅ JARVIS BRAIN is online!")
 print("🧠 LLM: Llama 3.2 (local)")
 print("📡 MQTT: Connected")
-print("\nSend commands to: jarvis/command")
-print("Example: mosquitto_pub -h localhost -t jarvis/command -m 'Turn on bedroom lights'\n")
+print("💡 Govee: Ready")
+print("\nSend commands to: jarvis/command\n")
 
 try:
     while True:
         time.sleep(1)
 except KeyboardInterrupt:
     print("\n👋 JARVIS shutting down...")
+
+
+
+
+
+
+
+
+
+
+
+
+
+

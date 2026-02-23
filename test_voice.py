@@ -3,7 +3,7 @@ import whisper
 import numpy as np
 
 print("Loading Whisper model...")
-model = whisper.load_model("base")
+model = whisper.load_model("small")
 print("Whisper loaded!")
 
 print("\nRecording 5 seconds... SPEAK NOW!")
