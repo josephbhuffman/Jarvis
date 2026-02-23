@@ -2,12 +2,33 @@ from llm_client import JarvisLLM
 from mqtt_client import JarvisMQTT
 import time
 import requests
+import subprocess
+import os
 
 # Your Govee API key
 GOVEE_API_KEY = "332fe7ca-0995-436d-ad33-c837ae8af443"
 
 llm = JarvisLLM()
 mqtt = JarvisMQTT()
+
+voice_model = os.path.expanduser("~/.local/share/piper/voices/en_US-amy-medium.onnx")
+
+def speak(text):
+    """Make JARVIS speak out loud"""
+    print(f"🔊 Speaking: {text}")
+    
+    process = subprocess.Popen(
+        ["piper", "--model", voice_model, "--output-raw"],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE
+    )
+    audio_data, _ = process.communicate(input=text.encode())
+    
+    play_process = subprocess.Popen(
+        ["aplay", "-r", "22050", "-f", "S16_LE", "-t", "raw", "-"],
+        stdin=subprocess.PIPE
+    )
+    play_process.communicate(input=audio_data)
 
 # Store device info
 govee_device = None
@@ -38,7 +59,7 @@ def control_light(action):
         "Content-Type": "application/json"
     }
     
-    cmd = "turn" if action == "turn_on" else "turn"
+    cmd = "turn"
     value = "on" if action == "turn_on" else "off"
     
     payload = {
@@ -63,39 +84,52 @@ def handle_command(topic, payload):
     
     print(f"\n🎤 Command received: {command}")
     
-    # Use LLM to understand the command
-    intent = llm.parse_intent(command)
+    # Try to parse as home automation command
+    try:
+        intent = llm.parse_intent(command)
+        print(f"🧠 Intent: {intent}")
+    except Exception as e:
+        print(f"⚠️ Intent parsing error: {e}")
+        intent = None
     
-    print(f"🧠 Intent: {intent}")
+    response = None
     
-    # Execute the action
-    action = intent.get('action')
-    device = intent.get('device')
-    response = intent.get('response')
+    # Check if we got a valid intent for device control
+    if intent and isinstance(intent, dict):
+        action = intent.get('action')
+        device = intent.get('device')
+        
+        # Device control commands
+        if device == 'light' and action in ['turn_on', 'turn_off']:
+            if action == 'turn_on':
+                success = control_light('turn_on')
+                if success:
+                    print(f"💡 REAL LIGHT TURNED ON!")
+                    response = "Light is now on"
+                else:
+                    response = "Failed to turn on light"
+                    
+            elif action == 'turn_off':
+                success = control_light('turn_off')
+                if success:
+                    print(f"🌑 REAL LIGHT TURNED OFF!")
+                    response = "Light is now off"
+                else:
+                    response = "Failed to turn off light"
     
-    # Control real Govee light!
-    if device == 'light':
-        if action == 'turn_on':
-            success = control_light('turn_on')
-            if success:
-                print(f"💡 REAL LIGHT TURNED ON!")
-                response = "Light is now on"
-            else:
-                print("❌ Failed to turn on light")
-                response = "Failed to turn on light"
-                
-        elif action == 'turn_off':
-            success = control_light('turn_off')
-            if success:
-                print(f"🌑 REAL LIGHT TURNED OFF!")
-                response = "Light is now off"
-            else:
-                print("❌ Failed to turn off light")
-                response = "Failed to turn off light"
+    # If no device command or intent failed, have conversation
+    if not response:
+        print(f"💬 Having conversation...")
+        try:
+            response = llm.conversation(command)
+        except Exception as e:
+            print(f"⚠️ Conversation error: {e}")
+            response = "I'm having trouble processing that request right now."
     
     # Send response back
     mqtt.publish("jarvis/response", response)
     print(f"💬 JARVIS: {response}\n")
+    speak(response)
 
 # Initialize Govee
 print("Initializing Govee connection...")
@@ -109,21 +143,13 @@ print("\n✅ JARVIS BRAIN is online!")
 print("🧠 LLM: Llama 3.2 (local)")
 print("📡 MQTT: Connected")
 print("💡 Govee: Ready")
-print("\nSend commands to: jarvis/command\n")
+print("\nReady for commands!\n")
 
 try:
     while True:
         time.sleep(1)
 except KeyboardInterrupt:
     print("\n👋 JARVIS shutting down...")
-
-
-
-
-
-
-
-
 
 
 

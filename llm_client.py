@@ -74,7 +74,24 @@ Only respond with valid JSON, nothing else."""
             intent = json.loads(response)
             return intent
         except:
-            return {
-                "action": "unknown",
-                "response": response
-            }
+            return None
+    
+    def conversation(self, message):
+        """Have a real conversation with JARVIS"""
+        
+        system_prompt = """You are JARVIS, an AI assistant created by Joseph. You are helpful, intelligent, and have a personality similar to the JARVIS from Iron Man - professional but warm.
+
+You can:
+- Control smart home devices (lights, plugs, etc.)
+- Answer questions about anything
+- Have conversations
+- Help with tasks
+- Be witty and engaging when appropriate
+
+Keep responses concise (1-3 sentences). You're running locally on Joseph's hardware - no cloud services."""
+
+        response = self.chat(message, system_prompt)
+        return response
+
+
+
