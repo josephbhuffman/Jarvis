@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>JARVIS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f7;
+            color: #1d1d1f;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        
+        .logo {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1d1d1f;
+        }
+        
+        .header-info {
+            display: flex;
+            gap: 30px;
+            font-size: 14px;
+            color: #86868b;
+        }
+        
+        .status-online {
+            color: #34c759;
+            font-weight: 600;
+        }
+        
+        .status-offline {
+            color: #ff3b30;
+            font-weight: 600;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+            transform: translateY(-2px);
+        }
+        
+        .card-title {
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #86868b;
+            margin-bottom: 16px;
+        }
+        
+        .stat-value {
+            font-size: 36px;
+            font-weight: 700;
+            color: #1d1d1f;
+            margin-bottom: 4px;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #86868b;
+        }
+        
+        .device-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .device-info h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #1d1d1f;
+        }
+        
+        .device-status {
+            font-size: 14px;
+            color: #86868b;
+        }
+        
+        .device-status.on {
+            color: #34c759;
+        }
+        
+        .toggle {
+            width: 60px;
+            height: 34px;
+            background: #e5e5ea;
+            border-radius: 34px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .toggle.active {
+            background: #34c759;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 28px;
+            height: 28px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .toggle.active .toggle-slider {
+            transform: translateX(26px);
+        }
+        
+        .command-section {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+        
+        .chat-messages {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-bottom: 16px;
+            padding-right: 8px;
+        }
+        
+        .chat-messages::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: #d1d1d6;
+            border-radius: 4px;
+        }
+        
+        .message {
+            margin-bottom: 12px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .message.user {
+            background: #007aff;
+            color: white;
+            margin-left: 60px;
+            text-align: right;
+        }
+        
+        .message.jarvis {
+            background: #f2f2f7;
+            color: #1d1d1f;
+            margin-right: 60px;
+        }
+        
+        .message.system {
+            text-align: center;
+            color: #86868b;
+            font-size: 12px;
+            background: transparent;
+        }
+        
+        .input-area {
+            display: flex;
+            gap: 12px;
+        }
+        
+        input {
+            flex: 1;
+            padding: 14px 16px;
+            background: #f2f2f7;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            color: #1d1d1f;
+            transition: background 0.2s;
+        }
+        
+        input:focus {
+            outline: none;
+            background: #e5e5ea;
+        }
+        
+        button {
+            padding: 14px 24px;
+            background: #007aff;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        button:hover {
+            background: #0051d5;
+        }
+        
+        button:active {
+            transform: scale(0.98);
+        }
+        
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+        }
+        
+        .quick-btn {
+            padding: 16px;
+            background: #f2f2f7;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #1d1d1f;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        
+        .quick-btn:hover {
+            background: #e5e5ea;
+        }
+        
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">JARVIS</div>
+            <div class="header-info">
+                <span id="time">--:--</span>
+                <span id="status" class="status-offline">Offline</span>
+            </div>
+        </header>
+        
+        <div class="grid">
+            <div class="card">
+                <div class="card-title">CPU Usage</div>
+                <div class="stat-value" id="cpu">--</div>
+                <div class="stat-label">Processor</div>
+            </div>
+            
+            <div class="card">
+                <div class="card-title">Memory</div>
+                <div class="stat-value" id="memory">--</div>
+                <div class="stat-label">RAM Usage</div>
+            </div>
+            
+            <div class="card">
+                <div class="card-title">System Uptime</div>
+                <div class="stat-value" id="uptime">--</div>
+                <div class="stat-label">Active Time</div>
+            </div>
+        </div>
+        
+        <div class="grid">
+            <div class="card device-card">
+                <div class="device-info">
+                    <h3>Tall Lamp</h3>
+                    <div class="device-status" id="light1-status">Off</div>
+                </div>
+                <div class="toggle" id="light1-toggle" onclick="toggleLight1()">
+                    <div class="toggle-slider"></div>
+                </div>
+            </div>
+            
+            <div class="card device-card">
+                <div class="device-info">
+                    <h3>Bedside Lamp</h3>
+                    <div class="device-status" id="light2-status">Off</div>
+                </div>
+                <div class="toggle" id="light2-toggle" onclick="toggleLight2()">
+                    <div class="toggle-slider"></div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-title">Quick Actions</div>
+                <div class="quick-actions">
+                    <button class="quick-btn" onclick="quickCommand('Turn on all lights')">All On</button>
+                    <button class="quick-btn" onclick="quickCommand('Turn off all lights')">All Off</button>
+                    <button class="quick-btn" onclick="quickCommand('What time is it?')">Time</button>
+                    <button class="quick-btn" onclick="quickCommand('Tell me a joke')">Joke</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="command-section">
+            <div class="card-title">Command Center</div>
+            <div class="chat-messages" id="chat"></div>
+            <div class="input-area">
+                <input type="text" id="message" placeholder="Ask JARVIS anything..." />
+                <button onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const ws = new WebSocket(`ws://${window.location.hostname}:8000/ws`);
+        const chat = document.getElementById('chat');
+        const status = document.getElementById('status');
+        const input = document.getElementById('message');
+        
+        let light1State = false;
+        let light2State = false;
+        
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('time').textContent = now.toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        }
+        
+        setInterval(updateTime, 1000);
+        updateTime();
+        
+        ws.onopen = () => {
+            status.textContent = 'Online';
+            status.className = 'status-online';
+            addMessage('JARVIS systems online', 'system');
+        };
+        
+        ws.onclose = () => {
+            status.textContent = 'Offline';
+            status.className = 'status-offline';
+        };
+        
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'response') {
+                addMessage(data.message, 'jarvis');
+            }
+        };
+        
+        function addMessage(text, type) {
+            const msg = document.createElement('div');
+            msg.className = 'message ' + type;
+            msg.textContent = text;
+            chat.appendChild(msg);
+            chat.scrollTop = chat.scrollHeight;
+        }
+        
+        function sendMessage() {
+            const message = input.value.trim();
+            if (!message) return;
+            
+            addMessage(message, 'user');
+            ws.send(JSON.stringify({message: message}));
+            input.value = '';
+        }
+        
+        function quickCommand(cmd) {
+            addMessage(cmd, 'user');
+            ws.send(JSON.stringify({message: cmd}));
+        }
+        
+        function toggleLight1() {
+            light1State = !light1State;
+            const toggle = document.getElementById('light1-toggle');
+            const statusEl = document.getElementById('light1-status');
+            
+            if (light1State) {
+                toggle.classList.add('active');
+                statusEl.textContent = 'On';
+                statusEl.classList.add('on');
+                fetch('/control/light1/on', {method: 'POST'});
+            } else {
+                toggle.classList.remove('active');
+                statusEl.textContent = 'Off';
+                statusEl.classList.remove('on');
+                fetch('/control/light1/off', {method: 'POST'});
+            }
+        }
+        
+        function toggleLight2() {
+            light2State = !light2State;
+            const toggle = document.getElementById('light2-toggle');
+            const statusEl = document.getElementById('light2-status');
+            
+            if (light2State) {
+                toggle.classList.add('active');
+                statusEl.textContent = 'On';
+                statusEl.classList.add('on');
+                fetch('/control/light2/on', {method: 'POST'});
+            } else {
+                toggle.classList.remove('active');
+                statusEl.textContent = 'Off';
+                statusEl.classList.remove('on');
+                fetch('/control/light2/off', {method: 'POST'});
+            }
+        }
+        
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+        
+        setInterval(() => {
+            fetch('/stats').then(r => r.json()).then(data => {
+                document.getElementById('cpu').textContent = data.cpu + '%';
+                document.getElementById('memory').textContent = data.memory + '%';
+                document.getElementById('uptime').textContent = data.uptime;
+            });
+        }, 2000);
+    </script>
+</body>
+</html>

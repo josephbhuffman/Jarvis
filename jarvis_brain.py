@@ -43,14 +43,16 @@ def init_govee():
         data = response.json()
         devices = data.get('data', {}).get('devices', [])
         if devices:
-            govee_device = devices[0]
-            print(f"✅ Connected to Govee: {govee_device.get('deviceName')}")
+            govee_device = devices
+            print(f"✅ Connected to {len(devices)} Govee devices:")
+            for device in devices:
+                print(f"   - {device.get('deviceName')}")
             return True
     
     print(f"❌ Govee connection failed: {response.status_code}")
     return False
 
-def control_light(action):
+def control_light(action, device_name=None):
     if not govee_device:
         return False
     
@@ -59,25 +61,41 @@ def control_light(action):
         "Content-Type": "application/json"
     }
     
+    # If specific device requested, find it
+    if device_name:
+        target_devices = [d for d in govee_device if device_name.lower() in d.get('deviceName', '').lower()]
+        if not target_devices:
+            print(f"❌ Device '{device_name}' not found")
+            return False
+    else:
+        # Control all devices
+        target_devices = govee_device
+    
     cmd = "turn"
     value = "on" if action == "turn_on" else "off"
     
-    payload = {
-        "device": govee_device['device'],
-        "model": govee_device['model'],
-        "cmd": {
-            "name": cmd,
-            "value": value
+    success_count = 0
+    for device in target_devices:
+        payload = {
+            "device": device['device'],
+            "model": device['model'],
+            "cmd": {
+                "name": cmd,
+                "value": value
+            }
         }
-    }
+        
+        response = requests.put(
+            "https://developer-api.govee.com/v1/devices/control",
+            headers=headers,
+            json=payload
+        )
+        
+        if response.status_code == 200:
+            success_count += 1
+            print(f"   ✅ {device.get('deviceName')} → {value}")
     
-    response = requests.put(
-        "https://developer-api.govee.com/v1/devices/control",
-        headers=headers,
-        json=payload
-    )
-    
-    return response.status_code == 200
+    return success_count > 0
 
 def handle_command(topic, payload):
     command = payload
@@ -98,24 +116,30 @@ def handle_command(topic, payload):
     if intent and isinstance(intent, dict):
         action = intent.get('action')
         device = intent.get('device')
+        room = intent.get('room', '')
         
         # Device control commands
         if device == 'light' and action in ['turn_on', 'turn_off']:
-            if action == 'turn_on':
-                success = control_light('turn_on')
-                if success:
-                    print(f"💡 REAL LIGHT TURNED ON!")
-                    response = "Light is now on"
+            # Check if specific light mentioned
+            device_name = None
+            if 'tall' in command.lower() or 'lamp' in command.lower():
+                device_name = 'tall'
+            elif 'bed' in command.lower() or 'bedside' in command.lower():
+                device_name = 'bed'
+            elif 'all' in command.lower():
+                device_name = None  # All lights
+            
+            success = control_light(action, device_name)
+            
+            if success:
+                if action == 'turn_on':
+                    print(f"💡 LIGHTS TURNED ON!")
+                    response = "Lights are now on"
                 else:
-                    response = "Failed to turn on light"
-                    
-            elif action == 'turn_off':
-                success = control_light('turn_off')
-                if success:
-                    print(f"🌑 REAL LIGHT TURNED OFF!")
-                    response = "Light is now off"
-                else:
-                    response = "Failed to turn off light"
+                    print(f"🌑 LIGHTS TURNED OFF!")
+                    response = "Lights are now off"
+            else:
+                response = "Failed to control lights"
     
     # If no device command or intent failed, have conversation
     if not response:
@@ -150,9 +174,3 @@ try:
         time.sleep(1)
 except KeyboardInterrupt:
     print("\n👋 JARVIS shutting down...")
-
-
-
-
-
-
