@@ -7,6 +7,10 @@ import json
 import psutil
 import time
 import requests
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 llm = JarvisLLM()
@@ -18,10 +22,10 @@ clients = []
 GOVEE_API_KEY = "332fe7ca-0995-436d-ad33-c837ae8af443"
 
 def handle_mqtt_response(topic, payload):
-    asyncio.create_task(broadcast({"type": "response", "message": payload}))
-
-mqtt.connect()
-mqtt.subscribe("jarvis/response", handle_mqtt_response)
+    try:
+        asyncio.create_task(broadcast({"type": "response", "message": payload}))
+    except:
+        pass
 
 async def broadcast(message):
     for client in clients:
@@ -29,6 +33,13 @@ async def broadcast(message):
             await client.send_json(message)
         except:
             clients.remove(client)
+
+# Connect to MQTT at module load
+logger.info("Initializing MQTT connection...")
+mqtt.connect()
+time.sleep(1)  # Give it a moment to connect
+mqtt.subscribe("jarvis/response", handle_mqtt_response)
+logger.info("MQTT connected and subscribed")
 
 @app.get("/")
 async def get():
@@ -40,15 +51,19 @@ async def get():
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     clients.append(websocket)
+    logger.info("WebSocket client connected")
     
     try:
         while True:
             data = await websocket.receive_text()
             message = json.loads(data)
             user_message = message['message']
+            logger.info(f"📤 Sending to MQTT: {user_message}")
             mqtt.publish("jarvis/command", user_message)
-    except:
-        clients.remove(websocket)
+    except Exception as e:
+        logger.error(f"WebSocket error: {e}")
+        if websocket in clients:
+            clients.remove(websocket)
 
 @app.post("/control/light1/on")
 async def light1_on():

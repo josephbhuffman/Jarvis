@@ -10,8 +10,8 @@ print("\nRecording 5 seconds... SPEAK NOW!")
 
 # Record 5 seconds of audio
 duration = 5
-sample_rate = 16000
-recording = sd.rec(int(duration * sample_rate), samplerate=sample_rate, channels=1, dtype='float32')
+sample_rate = 44100
+recording = sd.rec(int(duration * sample_rate), samplerate=sample_rate, channels=1, dtype='float32', device=4)
 sd.wait()
 
 print("Recording complete! Processing...")
