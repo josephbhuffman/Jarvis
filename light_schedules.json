@@ -1,0 +1,10 @@
+[
+  {
+    "id": 1,
+    "time": "08:30",
+    "action": "turn_on",
+    "days": "daily",
+    "device": null,
+    "enabled": true
+  }
+]
