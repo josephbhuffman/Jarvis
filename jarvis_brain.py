@@ -211,9 +211,12 @@ def handle_command(topic, payload):
         
         logger.info(f"🌤️ {response}")
     
-    # Check for future/automated light commands (BEFORE calendar check!)
-    elif ('tomorrow' in command_lower or 'every' in command_lower or 'daily' in command_lower) and ('light' in command_lower or 'lamp' in command_lower):
-        if 'list' in command_lower or 'show' in command_lower or ('my' in command_lower and 'schedule' in command_lower):
+    # Check for light schedule commands (BEFORE calendar and other checks!)
+    elif (('light' in command_lower or 'lamp' in command_lower) and 
+          ('schedule' in command_lower or 'show' in command_lower or 'list' in command_lower or 
+           'tomorrow' in command_lower or 'every' in command_lower or 'daily' in command_lower)):
+        
+        if 'list' in command_lower or 'show' in command_lower:
             schedules = light_scheduler.get_schedules()
             if schedules:
                 response = f"You have {len(schedules)} automatic light schedules:\n"
@@ -383,7 +386,7 @@ def handle_command(topic, payload):
         else:
             response = "Say 'set alarm for 7 AM', 'list alarms', or 'delete alarm'"
     
-    # Check for light control
+    # Check for light control (immediate on/off)
     elif 'light' in command_lower or 'lamp' in command_lower:
         # Determine action
         if 'on' in command_lower or 'turn on' in command_lower:
@@ -484,3 +487,4 @@ except KeyboardInterrupt:
     logger.info("\n👋 JARVIS shutting down...")
     alarm_system.running = False
     light_scheduler.running = False
+

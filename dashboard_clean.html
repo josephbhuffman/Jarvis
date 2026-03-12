@@ -177,6 +177,10 @@
             border-color: #007AFF;
         }
 
+        .light-btn:active {
+            transform: scale(0.98);
+        }
+
         .quick-actions {
             display: flex;
             gap: 10px;
@@ -360,8 +364,23 @@
             client.publish('jarvis/command', command);
         }
 
-        // Toggle light
+        // Track last light command time for rate limiting
+        let lastLightCommand = 0;
+        const LIGHT_COOLDOWN = 6000; // 6 seconds between commands
+
+        // Toggle light with rate limit protection
         function toggleLight(device, action) {
+            const now = Date.now();
+            const timeSinceLastCommand = now - lastLightCommand;
+            
+            if (timeSinceLastCommand < LIGHT_COOLDOWN) {
+                const secondsLeft = Math.ceil((LIGHT_COOLDOWN - timeSinceLastCommand) / 1000);
+                addMessage(`⚠️ Please wait ${secondsLeft} seconds (Govee rate limit)`, 'jarvis');
+                return;
+            }
+            
+            lastLightCommand = now;
+            
             let command = '';
             if (device === 'all') {
                 command = action === 'on' ? 'Turn on all lights' : 'Turn off all lights';
