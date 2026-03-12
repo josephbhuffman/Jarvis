@@ -1,7 +1,6 @@
 import whisper
 import subprocess
 import os
-import numpy as np
 from mqtt_client import JarvisMQTT
 import logging
 import time
@@ -14,10 +13,10 @@ class VoiceListener:
         self.mic_device = mic_device
         self.mqtt = JarvisMQTT()
         
-        # Load Whisper model
+        # Load Whisper tiny model (FAST!)
         logger.info("Loading Whisper model...")
-        self.model = whisper.load_model("base")
-        logger.info("✅ Whisper loaded")
+        self.model = whisper.load_model("tiny")
+        logger.info("✅ Whisper loaded (tiny model for speed)")
         
         # Connect to MQTT
         self.mqtt.connect()
@@ -32,7 +31,7 @@ class VoiceListener:
                 "-D", self.mic_device,
                 "-f", "cd",
                 "-d", str(duration),
-                "-q",  # Quiet mode
+                "-q",
                 filename
             ], check=True)
             return True
@@ -43,14 +42,14 @@ class VoiceListener:
     def transcribe(self, audio_file):
         """Convert speech to text"""
         try:
-            result = self.model.transcribe(audio_file)
+            result = self.model.transcribe(audio_file, fp16=False)
             return result['text'].strip()
         except Exception as e:
             logger.error(f"Transcription failed: {e}")
             return None
     
-    def check_for_wake_word(self, duration=3):
-        """Listen for wake word"""
+    def check_for_wake_word(self, duration=2):
+        """Listen for wake word - SHORTER duration for faster response"""
         if not self.record_audio(duration, "wake_word.wav"):
             return False
         
@@ -59,17 +58,17 @@ class VoiceListener:
         if text:
             text_lower = text.lower()
             # Check for wake words
-            wake_words = ["jarvis", "hey jarvis", "ok jarvis", "jarvis"]
+            wake_words = ["jarvis", "hey jarvis", "ok jarvis"]
             
             for wake_word in wake_words:
                 if wake_word in text_lower:
-                    logger.info(f"🎤 Wake word detected: {text}")
+                    logger.info(f"🎤 Wake word detected: '{text}'")
                     return True
         
         return False
     
-    def listen_for_command(self, duration=5):
-        """Listen for voice command after wake word"""
+    def listen_for_command(self, duration=4):
+        """Listen for voice command - SHORTER for faster response"""
         logger.info("🎤 Listening for command...")
         
         if not self.record_audio(duration, "command.wav"):
@@ -86,14 +85,15 @@ class VoiceListener:
     def run(self):
         """Main listening loop"""
         logger.info("🎤 Voice listener started!")
-        logger.info("Say 'Hey JARVIS' to activate...")
+        logger.info("💡 Using Whisper TINY model for speed")
+        logger.info("Say 'JARVIS' to activate...")
         
         while self.running:
             try:
-                # Listen for wake word
-                if self.check_for_wake_word(duration=3):
+                # Listen for wake word (2 seconds instead of 3)
+                if self.check_for_wake_word(duration=2):
                     # Wake word detected! Listen for command
-                    command = self.listen_for_command(duration=5)
+                    command = self.listen_for_command(duration=4)
                     
                     if command:
                         # Send command to JARVIS

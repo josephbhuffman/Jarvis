@@ -213,7 +213,7 @@ def handle_command(topic, payload):
     
     # Check for future/automated light commands (BEFORE calendar check!)
     elif ('tomorrow' in command_lower or 'every' in command_lower or 'daily' in command_lower) and ('light' in command_lower or 'lamp' in command_lower):
-        if 'list' in command_lower or 'show' in command_lower:
+        if 'list' in command_lower or 'show' in command_lower or ('my' in command_lower and 'schedule' in command_lower):
             schedules = light_scheduler.get_schedules()
             if schedules:
                 response = f"You have {len(schedules)} automatic light schedules:\n"
